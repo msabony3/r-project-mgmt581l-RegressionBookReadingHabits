@@ -1,0 +1,251 @@
+---
+title: "Matt-Sabony_Final-Project_MGMT-581L"
+output:
+  html_document: default
+  pdf_document: default
+date: "2024-12-05"
+---
+```{r Step 1: Identify the Research Problem and Collect Data}
+
+  # After searching through various sources for suitable data sets, I settled on the data set "Reading habit Dataset," found on Kaggle and pulled from data collected by the Pew Research Center. This data set was read into R through the object named "data_file," shown below.
+
+data_file <- read.csv("BigML_Dataset_5f50a62795a9306aa200003e.csv")
+
+  # The data consisted of 14 variables with 2832 responses. The variables included in the data set were as follows:
+
+    # Age: Age of respondent
+    # Sex: Sex of respondent (male or female)
+    # Race: Race of respondent 
+    # Marital_Status: Martial status of respondent
+    # Education: Highest education level of respondent
+    # Employment: Employment status of respondent
+    # Income: Income range of respondent
+    # Num_of_Books: Number of books respondent has read in the previous 12 months
+    # Printed: Has the respondent read any printed books in the previous 12 months (yes or no)
+    # Audio: Has the respondent read any audio books in the previous 12 months (yes or no)
+    # EBooks: Has the respondent read any e-books in the previous 12 months (yes or no)
+    # Acquisition_Method: How does the respondent acquire their books
+    # Daily_News/Newspaper: Does the respondent read any daily news or newspapers (yes or no)
+    # Magazines/Journals: Does the respondent read any magazines or journals (yes or no)
+
+  # After looking through the data, I decided to analyze the data set to discover if there was a true difference in the reading habits between older vs. younger readers. I had recently read an article about a professor in literature humanities at Columbia University who, since he began teaching in 1998, has required students to read a full book ever week or two throughout the semester. Overtime students became more apprehensive to this much reading, which came to a head in 2022 when a student told him that she found it very difficult to keep up and that she had never been required to read a full book in high school. This sparked my interest, since in my personal life I can think of plenty of adults that I know don't read books at all and plenty of my peers that read as their primary or secondary hobby. I was not able to incorporate additional external resources, since the data is specific to the respondents own experiences, and there was no need to create new variables based on the ones already in the data to start off with, but I did create new variables in my analyses. 
+
+  # There were several limitations that came with the data set. Any data set that relies on self reported data is sure to have some degree of response bias. Respondents could have felt the need to give more socially desirable answers than what is actually true. For example, respondents could have overestimated the number of books they read, said yes to reading newspapers even if that's not true, reported a higher salary or education level, etc. Additionally, there are issues with having questions with binary responses. For the variables "Printed," "EBooks," and "Audio," for example, each of those variables asks respondents if they have read at least one book in that format in the previous twelve months, but there is no way to account for their preference between the three or frequency. Someone could have read one eBook and 50 print books, but their answers for those variables with both just be "Yes." Another limitation is that a missing variable that would've been extremely informative is book length. All we have access to is the number of books read but we have no indication as to how long those books are, or at least an average or total page count over the year; one respondent could have read one encyclopedia and another respondent could have read 50 Dr. Suess books and there is no way to account for this potential disparity. One last limitation is that the data set only contains information relevant to the previous 12 months, which could have an effect on some variables. For example, someone who has more work than a usual year may have had less time to spend on reading, meaning that their response for the number of books they read is lower than it would've been otherwise.
+```
+
+```{r Step 2: Data Cleaning and Preprocessing}
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+  # Surprisingly, the data was very thorough to begin with. I started by renaming the variables to be easier to understand at a glance or fixed improper names. For example, upon downloading the data set, a variable that was clearly asking for the acquisition method with responses like "Purchased the book" and "Borrowed the book from a friend or family member" was titled "Last book you read, youâ€¦." Many of the variable names, even if named correctly, had strange punctuation. Using the code below, I renamed all of the columns that required it:
+
+colnames(data_file)[c(4, 6, 7, 8, 9, 10, 11, 12, 13, 14)] <- c("Marital_Status", "Employment", "Income", "Num_of_Books", "Printed", "Audio", "EBooks", "Acquisition_Method", "Daily_News/Newspaper", "Magazines/Journals")
+
+  # Based on my research question, I determined that the specific variables I wanted to investigate were "Age," "Num_of_Books," "Printed," "EBooks," and "Audio." I elected not to remove erroneous values in any variables outside of those five, as that may have removed values from variables I was using and therefore affect the outcome. "Age" and "Num_of_Books" had no missing or erroneous values, so those were left alone. "Printed," "EBooks," and "Audio" had some "Don't know" answers and a sizable amount of blank values. The blank values only occurred for respondents who reported to have read 0 books, meaning that I cannot fill those blank values with any imputation techniques. Since they read no books, they were most likely not asked to respond to those questions. I left the "Don't know" responses alone and filtered out those values later on when I was performing analysis on the book format variables, so as to not affect "Age" and "Num_of_Books." I also elected to not remove any outliers in "Age" or "Num_of_Books," as these potential outliers may still display important reading behavior that could help answer my research question.
+
+  # Following the data cleaning, I performed thorough data visualization for each of the five variables. First, I performed a simple summary() function on "Age" and "Num_of_Books" to learn about their respective minimums, maximums, medians, and means: 
+
+summary(data_file$Num_of_Books)
+summary(data_file$Age)
+
+  # There was a lot of important information garnered from these summaries. For example, we learned that respondents were between the ages of 16 and 93 years old, with the median being 48 and the mean being quite close at 47.28. This suggests a relatively normal distribution. We also learned that the number of books read by respondents were between 0 and 97, with the median being 6. However, the mean for "Num_of_Books" is 16.68, suggesting a strong right skew due to the massive disparity between the mean and median.
+
+  # Following this, I created histograms and box plots for "Num_of_Books" and "Age," respectively, shown below:
+
+    # Histogram for "Num_of_Books"
+ggplot(data_file, aes(x = Num_of_Books)) +
+  geom_histogram(binwidth = 5, fill = "lightblue", color = "black") + 
+  scale_x_continuous(breaks = seq(0, max(data_file$Num_of_Books, na.rm = TRUE), by = 10)) +
+  labs(title = "Histogram of Num_of_Books", x = "Number of books read in previous 12 months", y = "Count") +
+  theme_minimal() 
+
+    # Histogram for "Age"
+ggplot(data_file, aes(x = Age)) +
+  geom_histogram(binwidth = 5, fill = "lightblue", color = "black") + 
+  scale_x_continuous(breaks = seq(0, max(data_file$Num_of_Books, na.rm = TRUE), by = 10)) +
+  labs(title = "Histogram of Age", x = "Age", y = "Count") +
+  theme_minimal() 
+
+    # Box Plot of "Num_of_Books"
+ggplot(data_file, aes(x = Num_of_Books)) + 
+  geom_boxplot(fill = "lightblue") +  
+  labs(x = "Number of books read in previous 12 months", title = "Box Plot of Num_of_Books") +      
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(10, 100, by = 10))
+
+    # Box Plot for "Age"
+ggplot(data_file, aes(x = Age)) + 
+  geom_boxplot(fill = "lightblue") +  
+  labs(x = "Age", title = "Box Plot of Age") +      
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(10, 100, by = 10))
+
+  # The histograms and box plots allowed for a lot of information to be garnered that are not as accessible by simply looking at the numbers, as well as confirming assumption made from the summary() functions performed above. The histogram for "Num_of_Books" shows a drastic right skew, with the vast majority of respondents having read between 0 and 15 books, quickly decreasing in frequency for each bin after. There was, however, a surprising amount of respondents who reported to have read between 95 and 100 books. The histogram for "Age" portrays a relatively normal distribution, confirming my suspicions based on the summary() function. The box plot for "Num_of_Books" shows a majority of responses on the left end, with the plot cutting off at around 45 books. Responses greater than 45 were considered outliers. The box plot for "Age" is very similar to the histogram, while showing no outliers.
+
+  # Next, I created a stacked bar chart visualizing the "Yes" and "No" responses for each of the book format variables, "Printed," "EBooks," and "Audio." To do this, I created a variable called "book_format," consisting of all the responses to the book format variables with the empty or "Don't know" values removed. "book_format" portrays the responses in two columns, one with the format and the other with the "Yes" or "No" response. I then used this variable to create the stacked bar chart:
+
+book_format <- data_file %>%
+  select(Print = Printed, Audio = Audio, EBooks = EBooks) %>%
+  pivot_longer(cols = everything(), names_to = "Type", values_to = "Response") %>%
+  filter(Response != "",
+         Response != "Don't know") 
+
+ggplot(book_format, aes(x = Type, fill = Response)) +
+  geom_bar(position = "stack") +
+  labs(title = "Stacked Bar Chart of Book Formats", x = "Book Format", y = "Count", fill = "Response") +
+  scale_fill_manual(values = c("Yes" = "green", "No" = "red")) +
+  theme_minimal() 
+
+  # The stacked bar chart showed an overwhelming use of print books, with about 2250 respondents saying "Yes" to "Printed". In contrast, only a little more than 750 respondents said "Yes" to "EBooks" and not even 500 respondents saying "Yes" to "Audio." There is a clear preference for print book amongst readers in the data set.
+
+  # Lastly, I performed a correlation analysis on "Age" against "Num_of_Books." The matrix produced a correlation coefficient of 0.0545, indicating little to no correlation between them. This is apparent in the visualization of this analysis, where the scatter points for the variables are all over the graph with no apparent pattern:
+
+corr_analysis <- data_file[, c("Age", "Num_of_Books")]
+corr_matrix <- cor(corr_analysis, method = "pearson")
+corr_matrix
+
+ggplot(data_file, aes(x = Num_of_Books, y = Age)) + 
+  geom_point() +                        
+  labs(title = "Num_of_Books vs. Age", x = "Number of books read in previous 12 months", y = "Age") +
+  geom_smooth(method = "lm", color = "red", se = FALSE) + 
+  theme_minimal() 
+```
+
+```{r Step 3: Hypothesis Testing}
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+  # For my hypothesis test, I decided to perform a Anova (Analysis of Variance) test. Anova tests are used to determine whether there is a significant difference in the means of pairs of variables when comparing three or more. My null and alternative hypotheses were as follows:
+
+    # H0: The mean age is the same for those who answered "Yes" to "Printed," "EBooks," and "Audio."
+    # Ha: At least one pair of means are different from each other for those who answered "Yes" to "Printed," "EBooks," and "Audio."
+
+  # To perform the Anova, I first created a new object called "age_format_data," which filters "Printed," "EBooks," and "Audio" to include only the "Yes" values, and includes the age of those respondents. Using "age_format_data" I performed the Anova:
+
+age_format_data <- data_file %>%
+  select(Age, Printed, Audio, EBooks) %>%
+  pivot_longer(cols = c(Printed, Audio, EBooks), names_to = "Format", values_to = "Response") %>%
+  filter(Response == "Yes")
+
+anova_results <- aov(Age ~ Format, data = age_format_data)
+summary(anova_results)
+
+  # After performing the Anova test, the resulting p-value is 0.0276. The p-value is less than the significance level of 0.05, meaning that the null hypothesis is rejected and the alternative hypothesis is accepted; the mean age differs among those who answered "Yes" to "Printed," "EBooks," and "Audio." To determine which pairs are significant, I performed a Tukey HSD test:
+
+TukeyHSD(x = anova_results, conf.level = 0.95) 
+
+  # The Tukey HSD test tells us that the only pair of book formats with significantly different means is "Printed-EBooks," with a difference of 1.768. "EBooks-Audio" and "Printed-Audio" both have p-values over the significance level of 0.05, those being 0.0617 and 0.749, respectively. "Printed-EBooks" has a p-value of 0.0450, falling below the significance level. Even though "EBooks-Audio" has an absolute difference of 2.46, which is greater than "Printed-EBooks," it is most likely insignificant due to the disparate sample sizes. Looking at the stacked bar chart of book formats, "Printed" has about 2250 "Yes" values, with "EBooks" having about 750 and "Audio" having less than 500. 
+```
+
+```{r Step 4: Build Statistical or Machine Learning Models and Evaluate Their Performance}
+
+library(dplyr)
+library(ggplot2)
+library(pROC)
+library(VGAM)
+
+# Binary Linear Regression
+
+  # The first statistical/machine learning model I performed was a simple linear regression. The function of a simple linear regression is that it takes in an input feature (x) and uses that to predict the values of the target variable (y). This is used to find a linear regression equation. I wanted to test if "Age" can be used to predict "Num_of_Books." After performing the linear regression, shown below, I visualized the relationship:
+
+lin_regression <- lm(Num_of_Books ~ Age, data = data_file)
+summary(lin_regression)
+
+ggplot(data_file, aes(y = Age, x = Num_of_Books)) +
+  geom_point() +
+  geom_smooth(method = "lm", level = 0.95) +
+  labs(x = "Number of Books Read in Previous 12 Months", y = "Age", title = "Relationship between Num_of_Books and Age") +
+  theme_minimal() 
+
+  # After running the linear regression model, the resulting regression equation is [ Num_of_Books = 13.37 + 0.07(Age) ]. Interpreting the regression equation literally, at "Age" = 0, a person is expected to have read 13.37 books. Of course, that is not realistic in this context. The slope coefficient of 0.07 means that every time "Age" increases by one, "Num_of_Books" will rise by 0.07. The intercept has a p-value of 2e-16 and the coefficient has a p-value of 0.003, both of which are less than the significance level of 0.05 and are therefore statistically significant. The model indicates a positive relationship between "Age" and "Num_of_Books," albeit a relatively marginal one given the context. The R-squared value is 0.003. The R-squared is used to identify how much of the variance in the model is explained by the regression equation. In this context, the R-squared is extremely close to 0, with only 0.3% of the variation being explained. This would suggest that the model is a poor fit for the data set. Residuals range from -19.805 - 82.512 with a median value of -9.558, which indicates a large amount of variation for this data set. This means that the farthest an individual data point is above the regression equation is 82.512 units and the farthest an individual data point gets below the regression model is 19.805 units. With the range of "Num_of_Books" only spanning from 0 - 97, residuals of this size suggest a lot of variation. The F-statistic is 8.577. The F-statistic is the result of dividing the variance between groups by the variance within groups. The F-statistic has a p-value of 0.003, meaning that the model is overall statistically significant.
+
+  # The scatter plot depicts the relationship between "Age" and "Num_of_Books," along with a fitted regression line. As the slope coefficient of 0.07 would suggest, the fitted regression line is nearly flat. The scatter plot also depicts the amount of variability between all of the data points and the fitted regression line. The plot follows a similar pattern as the histogram and box plot of "Num_of_Books" above. Most of the data points are on the left side, just as most respondents read between 0 - 15 books. There is also a notable amount of points on the rightmost end, just as the histogram depicts a surprisingly large bin of respondents who read between 95 - 100 books. 
+
+# Binary Logistic Regression
+
+  # The next statistical/machine learning model I performed was a binary logistic regression. A logistic regression is used to predict the probability of a binary outcome. My goal for the model was the see if there was a relationship between the three book formats, "Printed," "EBooks," and "Audio" and "Age," specifically if I can use "Age" to predict whether or not someone would have read a book in that format. To do this, I first cleaned the data. I filtered out all rows with empty values, captured by "Num_of_Books != 0" below. I also removed all rows where the respondent answered "Don't know" for the three book format variables. These filters were performed in a new data set that would leave "data_file" unaffected. The new object, "data_file_clean" is created below:
+
+data_file_clean <- data_file %>% 
+  filter(
+    Num_of_Books != 0,
+    Printed != "Don't know",
+    Audio != "Don't know",
+    EBooks != "Don't know") 
+
+  # I performed three separate binary logistic regressions, one for each of three book format variables. Each model takes the book format as the dependent variable First, I had to go through each variable and convert the "Yes" and "No" answers to 1 or 0, where "Yes" = 1. 
+
+data_file_clean$Printed <- ifelse(data_file_clean$Printed == "Yes", 1, 0)
+data_file_clean$Audio <- ifelse(data_file_clean$Audio == "Yes", 1, 0)
+data_file_clean$EBooks <- ifelse(data_file_clean$EBooks == "Yes", 1, 0)
+
+  # With the data ready to go, I performed the logistic regressions. I also predicted the likelihood of each of the variables at "Age" = 0, and calculated the ROC (Receiver Operating Characteristic) Curve curve and the AUC (Area Under the Curve):
+
+    # For "Printed":
+
+log_reg_printed <- glm(Printed ~ Age, data = data_file_clean, family = "binomial")
+summary(log_reg_printed)
+
+intercept_printed <- data.frame(Age = 0)
+predict(log_reg_printed, intercept_printed, type="response")
+
+predicted_probs_printed <- predict(log_reg_printed, data_file_clean, type = "response")
+roc_curve_printed <- roc(data_file_clean$Printed, predicted_probs_printed, levels = c(0, 1), direction = "<")
+par(pty = "s")
+plot(roc_curve_printed, main = "ROC Curve for 'Printed'")
+auc_value_printed <- auc(roc_curve_printed)
+print(auc_value_printed)
+
+  # The intercept of the "Printed" model is 2.229. Using the predict() function at Age = 0, the probability of reading printed books at the intercept is 0.902 or 90.2%. The "Age" coefficient is 0.00847 with a p-value of 0.0552. The "Age" coefficient is positive, meaning that as age increases by one unit, the log-odds of reading printed books increases by 0.00847. Since the p-value is greater than the significance level of 0.05, "Age" is not statistically significant. The model has a null deviance of 1204.0 and a residual deviance of 1200.3. The reduction in the deviance is very small, which indicates that adding values from "Age" does not help teach the model enough to reduce the variance. Lastly, the AUC was calculated to be 0.5454. The AUC is under 0.7, which means that there is poor discrimination in the model.
+
+    # For "Audio":
+
+log_reg_audio <- glm(Audio ~ Age, data = data_file_clean, family = "binomial")
+summary(log_reg_audio)
+
+intercept_audio <- data.frame(Age = 0)
+predict(log_reg_audio, intercept_audio, type="response")
+
+predicted_probs_audio <- predict(log_reg_audio, data_file_clean, type = "response")
+roc_curve_audio <- roc(data_file_clean$Audio, predicted_probs_audio, levels = c(0, 1), direction = "<")
+par(pty = "s")
+plot(roc_curve_audio, main = "ROC Curve for 'Audio'")
+auc_value_audio <- auc(roc_curve_audio)
+print(auc_value_audio)
+
+  # Looking at the results for the logistic regression for "Audio," the intercept is -1.776. Using the predict() function at Age = 0, the probability of reading audio books at the intercept is 0.145 or 14.5%. The "Age" coefficient is 0.003579 with a p-value of 0.226. The "Age" coefficient is positive, meaning that as age increases, the log-odds of reading audio books will increase by 0.003579. Since the p-value is greater than the significance level of 0.05, "Age" is not statistically significant. The null deviance and residual deviance are 2177.8 and 2176.4, respectively. Again, there is a very small reduction in deviance, indicating that "Age" explains very little variability in whether someone reads audio books. Lastly, the AUC is 0.5215, which is also less than 0.7, indicating that this model also has poor discrimination
+
+    # For "EBooks":
+
+log_reg_ebooks <- glm(EBooks ~ Age, data = data_file_clean, family = "binomial")
+summary(log_reg_ebooks)
+
+intercept_ebooks <- data.frame(Age = 0)
+predict(log_reg_ebooks, intercept_ebooks, type="response")
+
+predicted_probs_ebooks <- predict(log_reg_ebooks, data_file_clean, type = "response")
+roc_curve_ebooks <- roc(data_file_clean$EBooks, predicted_probs_ebooks, levels = c(0, 1), direction = "<")
+par(pty = "s")
+plot(roc_curve_ebooks, main = "ROC Curve for 'EBooks'")
+auc_value_ebooks <- auc(roc_curve_ebooks)
+print(auc_value_ebooks)
+
+  # The model for "EBooks" ended up showing much more interesting results. Starting with the intercept of -0.430, we can use the predict() function again to calculate that at "Age" = 0, the probability of reading eBooks is 0.394, or 39.4%. The "Age" coefficient is -0.00656, with a p-value of 0.0056. The coefficient is statistically significant, meaning that "Age" can be used as a predictor of whether or not someone has read eBooks. The coefficient is negative, indicating that as "Age" increase, the likelihood that they read eBooks decreases. The null and residual deviances are 3044.4 and 3036.7, respectively. This is still a small reduction in deviance, but slightly better than the other variables. The area under the ROC curve for this model is 0.5322, which, in kind with the other two model, under 0.7 and therefore indicates poor discrimination.
+```
+
+```{r Step 5: Interpret Results}
+  # The Anova test, simple linear regression, and binary logistic regression models I ran all provided interesting results, whether or not they were statistically significant. 
+  
+  # The Anova test aimed to discover if there are significant differences between the means of each pair of book format variables. The model proved statistically significant, and upon performing an Tukey HSD test the only significant pair was "Printed-EBooks," with a mean difference of 1.768. This means that there are a significantly different percentage of people that read print books than do eBooks.
+
+  # The linear regression model aimed to test whether "Age" could be used as a predictor of "Num_of_Books." Upon completing the model and reviewing the output, it was apparent that "Age" can be used as a predictor of the number of books someone had read in the past 12 months. Looking at the scatter plot, you would expect there to be no clear correlation between someones age and the amount of books they have read in the previous 12 months, however the model predicts that with every increase in "Age" by one year, the amount of books they are predicted to have read in the past twelve months increases by 0.07. There is a lot of variation in the data, and the R-squared is extremely close to 0, meaning that very little of the variance can be explained by the regression equation. Any output from the regression equation should be taken with a grain of salt due to the previously mentioned issues with the model, but still could provide some insight into how someone's age could influence the amount of books they have read recently.
+
+  # The logistic regression models are meant to test whether age can be used as a predictor for whether or not someone reads print books, audio books, and/or eBooks. Of the three models, the only one to produce a significant result was the one that used "EBooks" as the independent variable. That model suggests that as readers get older, they are less to likely to have read an eBook in the previous twelve months.
+
+  # I did not have many expectations going into the research. I did somewhat expect the data to show that younger people read less than older people, as that seems to be the common sentiment in our current society, but I have seen in my own life that that idea may not be true. This assumption was disproven, since the correlation analysis showed that there was little to no correlation between a respondent's age and the number of books they read in the previous 12 months. Another expectation I had was that I expected printed books to be the most popular book format, with eBooks being the second most popular (particularly with younger and middle-aged respondents), and audio books being the most niche format, especially with younger readers. As seen in the stacked bar chart for book formats, the vast majority of readers use print books, only about a quarter read eBooks and around an eighth read audio books. Based on the logistic regression models, since "Age" can only be used as a predictor for "EBooks," it seems that printed books have a general appeal across all ages, there is a general disinterest for audio books, and as previously stated eBooks are less popular with older readers.
+
+  # My first recommendation is to personalize marketing campaigns to specific demographics based on book format, specifically eBooks. Targeting marketing campaigns towards younger and middle-aged readers could prove more effective than general marketing to all demographics. My second recommendation is to test audio and/or eBook exclusive book releases, especially for books aimed toward older readers. For a book that would typically be targeted toward older demographics, testing a release exclusively on digital formats could help encourage more older readers to tap into that market, opening them up to new customers. My final recommendation is to create a Goodreads membership tier, potentially partnering with Audible and/or Kindle to increase digital book format usage and sales. Goodreads is a website/app similar to iMDB where users can rate and review books they've read, create lists, discover new books, etc. If they added a membership tier that could include a free trial or subscription to Audible and/or Kindle, this would encourage eBook usage to potentially new customers.
+```
